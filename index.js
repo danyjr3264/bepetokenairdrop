@@ -25,7 +25,7 @@ const alreadyClaimedImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ip
 
 // Konfigurasi Neynar
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY; // Gunakan env variable
-const YOUR_FID = 12345; // Ganti dengan FID Anda
+const YOUR_FID = 1041332; // Ganti dengan FID Anda
 
 // Fungsi untuk memverifikasi follow dengan Neynar
 async function checkFollow(fid) {
