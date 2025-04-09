@@ -1,43 +1,41 @@
 const express = require('express');
 const ethers = require('ethers');
 const axios = require('axios');
-const app = express(); // Pastikan ini ada!
+const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Konfigurasi Base dan kontrak
 const provider = new ethers.providers.JsonRpcProvider('https://mainnet.base.org');
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '', provider);
 const claimContract = new ethers.Contract(
   '0xF66669aE4c0e89F28B630Fe7DC84dAcAd1FB5c10',
   [
     'function claim(uint256 fid, address recipient) external',
-    'function hasClaimed(uint256 fid) view returns (bool)'
+    'function hasClaimed(uint256 fid) view returns (bool)',
+    'function owner() view returns (address)',
+    'function bepeToken() view returns (address)'
   ],
   wallet
 );
 
-// Kontrak BEPE untuk cek allowance dan balance
 const bepeToken = new ethers.Contract(
   '0x59574ec1467BDe0BA1d7D690ce5a55C46c50370B',
   [
     'function allowance(address owner, address spender) view returns (uint256)',
-    'function balanceOf(address account) view returns (uint256)'
+    'function balanceOf(address account) view returns (uint256)',
+    'function transferFrom(address sender, address recipient, uint256 amount) external returns (bool)'
   ],
-  provider
+  wallet
 );
 
-// Gambar untuk Frame
 const initialImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ipfs/bafkreihh3z4zd3ksow5vfgye3e3tt2oxqpuqvwcsdlvbxtlejf4abeq5ra';
 const successImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ipfs/bafkreie6aufatogglaniin6lgbsrykpb5xts2uu5avve2vofymvns5yqii';
 const alreadyClaimedImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ipfs/bafkreigbqnrr2yxpllo65yw5obwctcypklmnbt7v6iryv67odloqil6mvu';
 
-// Konfigurasi Neynar
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || '';
 const YOUR_FID = 1041332;
 
-// Fungsi untuk memverifikasi follow dengan Neynar
 async function checkFollow(fid) {
   try {
     console.log('Checking follow for FID:', fid);
@@ -59,12 +57,10 @@ async function checkFollow(fid) {
   }
 }
 
-// Rute root
 app.get('/', (req, res) => {
   res.redirect('/frame');
 });
 
-// Tampilan awal Frame
 app.get('/frame', (req, res) => {
   console.log('Frame accessed');
   res.set('Content-Type', 'text/html');
@@ -84,7 +80,6 @@ app.get('/frame', (req, res) => {
   `);
 });
 
-// Proses klaim
 app.post('/claim', async (req, res) => {
   console.log('Claim attempt:', req.body);
   const { untrustedData } = req.body;
@@ -134,9 +129,13 @@ app.post('/claim', async (req, res) => {
   try {
     console.log('Attempting claim with FID:', fid, 'Recipient:', recipient);
 
-    // Cek allowance dan balance
-    const allowance = await bepeToken.allowance(wallet.address, claimContract.address);
-    const balance = await bepeToken.balanceOf(wallet.address);
+    const owner = await claimContract.owner();
+    const tokenAddress = await claimContract.bepeToken();
+    console.log('Contract owner:', owner);
+    console.log('BEPE token address in contract:', tokenAddress);
+
+    const allowance = await bepeToken.allowance(owner, claimContract.address);
+    const balance = await bepeToken.balanceOf(owner);
     console.log('Allowance:', ethers.utils.formatEther(allowance), 'BEPE');
     console.log('Balance:', ethers.utils.formatEther(balance), 'BEPE');
 
@@ -145,6 +144,17 @@ app.post('/claim', async (req, res) => {
     }
     if (balance.lt(ethers.utils.parseEther('1000000'))) {
       throw new Error('Insufficient BEPE balance');
+    }
+
+    // Simulasi transferFrom dari kontrak
+    const amount = ethers.utils.parseEther('1000000');
+    console.log('Simulating transferFrom from:', owner, 'to:', recipient, 'amount:', ethers.utils.formatEther(amount));
+    try {
+      const transferSim = await bepeToken.callStatic.transferFrom(owner, recipient, amount, { from: claimContract.address });
+      console.log('TransferFrom simulation result:', transferSim);
+    } catch (simError) {
+      console.error('TransferFrom simulation failed:', simError.message, simError);
+      throw new Error('TransferFrom simulation failed: ' + simError.message);
     }
 
     const tx = await claimContract.claim(fid, recipient, { gasLimit: 200000 });
