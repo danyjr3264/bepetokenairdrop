@@ -9,7 +9,7 @@ app.use(express.urlencoded({ extended: true }));
 const provider = new ethers.providers.JsonRpcProvider('https://mainnet.base.org');
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '', provider);
 const claimContract = new ethers.Contract(
-  '0xF66669aE4c0e89F28B630Fe7DC84dAcAd1FB5c10',
+  '0xCBf3b615e7f78b4743917d363066C31f5f4c1135',
   [
     'function claim(uint256 fid, address recipient) external',
     'function hasClaimed(uint256 fid) view returns (bool)',
