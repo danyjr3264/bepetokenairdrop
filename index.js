@@ -25,7 +25,7 @@ const alreadyClaimedImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ip
 
 // Konfigurasi Neynar
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || '';
-const YOUR_FID = 1041332; // FID Anda
+const YOUR_FID = 1041332;
 
 // Fungsi untuk memverifikasi follow dengan Neynar
 async function checkFollow(fid) {
@@ -90,6 +90,7 @@ app.post('/claim', async (req, res) => {
   }
 
   const hasClaimed = await claimContract.hasClaimed(fid);
+  console.log('Has claimed:', hasClaimed);
   if (hasClaimed) {
     return res.set('Content-Type', 'text/html').send(`
       <!DOCTYPE html>
@@ -105,6 +106,7 @@ app.post('/claim', async (req, res) => {
   }
 
   const isFollowing = await checkFollow(fid);
+  console.log('Is following:', isFollowing);
   if (!isFollowing) {
     return res.set('Content-Type', 'text/html').send(`
       <!DOCTYPE html>
@@ -120,8 +122,11 @@ app.post('/claim', async (req, res) => {
   }
 
   try {
-    const tx = await claimContract.claim(fid, recipient);
+    console.log('Attempting claim with FID:', fid, 'Recipient:', recipient);
+    const tx = await claimContract.claim(fid, recipient, { gasLimit: 200000 }); // Tambahkan gas limit manual
+    console.log('Transaction sent:', tx.hash);
     await tx.wait();
+    console.log('Transaction confirmed');
     res.set('Content-Type', 'text/html').send(`
       <!DOCTYPE html>
       <html>
@@ -134,7 +139,7 @@ app.post('/claim', async (req, res) => {
       </html>
     `);
   } catch (e) {
-    console.error('Claim error:', e.message);
+    console.error('Claim error:', e.message, e);
     res.send('Error: Claim failed - ' + e.message);
   }
 });
