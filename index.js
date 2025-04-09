@@ -34,11 +34,12 @@ const successImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ipfs/bafk
 const alreadyClaimedImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ipfs/bafkreigbqnrr2yxpllo65yw5obwctcypklmnbt7v6iryv67odloqil6mvu';
 
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || '';
-const YOUR_FID = 1041332;
+const YOUR_FID = 1041332; // FID pertama
+const SECOND_FID = 1045971; // FID kedua
 
 async function checkFollow(fid) {
   try {
-    console.log('Checking follow for FID:', fid);
+    console.log('Checking follows for FID:', fid);
     const followsResponse = await axios.get(
       `https://api.neynar.com/v2/farcaster/following?fid=${fid}`,
       {
@@ -50,7 +51,12 @@ async function checkFollow(fid) {
       console.error('No users data in response or not an array');
       return false;
     }
-    return followsResponse.data.users.some(f => f.user.fid === YOUR_FID);
+    const follows = followsResponse.data.users.map(f => f.user.fid);
+    const followsFirst = follows.includes(YOUR_FID);
+    const followsSecond = follows.includes(SECOND_FID);
+    console.log(`Follows ${YOUR_FID}:`, followsFirst);
+    console.log(`Follows ${SECOND_FID}:`, followsSecond);
+    return followsFirst && followsSecond; // Harus follow keduanya
   } catch (e) {
     console.error('Error checking follow:', e.message, e.response?.data);
     return false;
@@ -111,7 +117,7 @@ app.post('/claim', async (req, res) => {
   }
 
   const isFollowing = await checkFollow(fid);
-  console.log('Is following:', isFollowing);
+  console.log('Is following both accounts:', isFollowing);
   if (!isFollowing) {
     return res.set('Content-Type', 'text/html').send(`
       <!DOCTYPE html>
@@ -119,7 +125,7 @@ app.post('/claim', async (req, res) => {
         <head>
           <meta property="fc:frame" content="vNext" />
           <meta property="fc:frame:image" content="${initialImage}" />
-          <meta property="fc:frame:button:1" content="Follow me to claim!" />
+          <meta property="fc:frame:button:1" content="Follow both accounts to claim!" />
         </head>
         <body></body>
       </html>
@@ -146,14 +152,8 @@ app.post('/claim', async (req, res) => {
       throw new Error('Insufficient BEPE balance');
     }
 
-    // Cek estimasi gas untuk mendeteksi revert
-    try {
-      const gasEstimate = await claimContract.estimateGas.claim(fid, recipient);
-      console.log('Gas estimate for claim:', gasEstimate.toString());
-    } catch (gasError) {
-      console.error('Gas estimation failed:', gasError.message, gasError);
-      throw new Error('Gas estimation failed: ' + gasError.message);
-    }
+    const amount = ethers.utils.parseEther('1000000');
+    console.log('Calling claim with owner:', owner, 'recipient:', recipient, 'amount:', ethers.utils.formatEther(amount));
 
     const tx = await claimContract.claim(fid, recipient, { gasLimit: 200000 });
     console.log('Transaction sent:', tx.hash);
