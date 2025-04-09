@@ -1,5 +1,5 @@
 const express = require('express');
-const ethers = require('ethers'); // Impor ethers v5
+const ethers = require('ethers');
 const axios = require('axios');
 const app = express();
 
@@ -42,6 +42,11 @@ async function checkFollow(fid) {
     return false;
   }
 }
+
+// Tambahkan rute root untuk redirect ke /frame
+app.get('/', (req, res) => {
+  res.redirect('/frame');
+});
 
 // Tampilan awal Frame
 app.get('/frame', (req, res) => {
