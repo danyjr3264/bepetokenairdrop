@@ -30,20 +30,26 @@ const YOUR_FID = 1041332; // FID Anda
 // Fungsi untuk memverifikasi follow dengan Neynar
 async function checkFollow(fid) {
   try {
+    console.log('Checking follow for FID:', fid);
     const followsResponse = await axios.get(
       `https://api.neynar.com/v2/farcaster/following?fid=${fid}`,
       {
         headers: { 'api_key': NEYNAR_API_KEY }
       }
     );
+    console.log('Neynar API response:', followsResponse.data);
+    if (!followsResponse.data.following) {
+      console.error('No following data in response');
+      return false;
+    }
     return followsResponse.data.following.some(f => f.user.fid === YOUR_FID);
   } catch (e) {
-    console.error('Error checking follow:', e.message);
+    console.error('Error checking follow:', e.message, e.response?.data);
     return false;
   }
 }
 
-// Tambahkan rute root untuk redirect ke /frame
+// Rute root
 app.get('/', (req, res) => {
   res.redirect('/frame');
 });
