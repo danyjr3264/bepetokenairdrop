@@ -146,15 +146,13 @@ app.post('/claim', async (req, res) => {
       throw new Error('Insufficient BEPE balance');
     }
 
-    // Simulasi transferFrom dari kontrak
-    const amount = ethers.utils.parseEther('1000000');
-    console.log('Simulating transferFrom from:', owner, 'to:', recipient, 'amount:', ethers.utils.formatEther(amount));
+    // Cek estimasi gas untuk mendeteksi revert
     try {
-      const transferSim = await bepeToken.callStatic.transferFrom(owner, recipient, amount, { from: claimContract.address });
-      console.log('TransferFrom simulation result:', transferSim);
-    } catch (simError) {
-      console.error('TransferFrom simulation failed:', simError.message, simError);
-      throw new Error('TransferFrom simulation failed: ' + simError.message);
+      const gasEstimate = await claimContract.estimateGas.claim(fid, recipient);
+      console.log('Gas estimate for claim:', gasEstimate.toString());
+    } catch (gasError) {
+      console.error('Gas estimation failed:', gasError.message, gasError);
+      throw new Error('Gas estimation failed: ' + gasError.message);
     }
 
     const tx = await claimContract.claim(fid, recipient, { gasLimit: 200000 });
