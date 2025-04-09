@@ -1,5 +1,5 @@
 const express = require('express');
-const { ethers } = require('ethers');
+const ethers = require('ethers'); // Impor ethers v5
 const axios = require('axios');
 const app = express();
 
@@ -8,7 +8,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Konfigurasi Base dan kontrak
 const provider = new ethers.providers.JsonRpcProvider('https://mainnet.base.org');
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider); // Gunakan env variable
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '', provider);
 const claimContract = new ethers.Contract(
   '0xF66669aE4c0e89F28B630Fe7DC84dAcAd1FB5c10',
   [
@@ -24,8 +24,8 @@ const successImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ipfs/bafk
 const alreadyClaimedImage = 'https://blush-hidden-mongoose-258.mypinata.cloud/ipfs/bafkreigbqnrr2yxpllo65yw5obwctcypklmnbt7v6iryv67odloqil6mvu';
 
 // Konfigurasi Neynar
-const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY; // Gunakan env variable
-const YOUR_FID = 1041332; // Ganti dengan FID Anda
+const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || '';
+const YOUR_FID = 1041332; // FID Anda
 
 // Fungsi untuk memverifikasi follow dengan Neynar
 async function checkFollow(fid) {
@@ -38,13 +38,14 @@ async function checkFollow(fid) {
     );
     return followsResponse.data.following.some(f => f.user.fid === YOUR_FID);
   } catch (e) {
-    console.error('Error checking follow:', e);
+    console.error('Error checking follow:', e.message);
     return false;
   }
 }
 
 // Tampilan awal Frame
 app.get('/frame', (req, res) => {
+  console.log('Frame accessed');
   res.set('Content-Type', 'text/html');
   res.send(`
     <!DOCTYPE html>
@@ -64,20 +65,19 @@ app.get('/frame', (req, res) => {
 
 // Proses klaim
 app.post('/claim', async (req, res) => {
+  console.log('Claim attempt:', req.body);
   const { untrustedData } = req.body;
-  const fid = untrustedData?.fid; // FID pengguna dari Warpcast
-  const recipient = untrustedData?.inputText; // Alamat dompet dari input pengguna
+  const fid = untrustedData?.fid;
+  const recipient = untrustedData?.inputText;
 
   if (!fid || !recipient) {
     return res.send('Error: FID or wallet address missing');
   }
 
-  // Validasi alamat dompet (opsional, untuk keamanan)
   if (!ethers.utils.isAddress(recipient)) {
     return res.send('Error: Invalid wallet address');
   }
 
-  // Cek apakah FID sudah klaim
   const hasClaimed = await claimContract.hasClaimed(fid);
   if (hasClaimed) {
     return res.set('Content-Type', 'text/html').send(`
@@ -93,7 +93,6 @@ app.post('/claim', async (req, res) => {
     `);
   }
 
-  // Verifikasi follow dengan Neynar
   const isFollowing = await checkFollow(fid);
   if (!isFollowing) {
     return res.set('Content-Type', 'text/html').send(`
@@ -109,12 +108,9 @@ app.post('/claim', async (req, res) => {
     `);
   }
 
-  // Proses klaim
   try {
     const tx = await claimContract.claim(fid, recipient);
     await tx.wait();
-
-    // Tampilkan Frame sukses
     res.set('Content-Type', 'text/html').send(`
       <!DOCTYPE html>
       <html>
@@ -127,6 +123,7 @@ app.post('/claim', async (req, res) => {
       </html>
     `);
   } catch (e) {
+    console.error('Claim error:', e.message);
     res.send('Error: Claim failed - ' + e.message);
   }
 });
