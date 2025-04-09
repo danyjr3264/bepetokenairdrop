@@ -38,11 +38,11 @@ async function checkFollow(fid) {
       }
     );
     console.log('Neynar API response:', followsResponse.data);
-    if (!followsResponse.data.following) {
-      console.error('No following data in response');
+    if (!followsResponse.data.users || !Array.isArray(followsResponse.data.users)) {
+      console.error('No users data in response or not an array');
       return false;
     }
-    return followsResponse.data.following.some(f => f.user.fid === YOUR_FID);
+    return followsResponse.data.users.some(f => f.user.fid === YOUR_FID);
   } catch (e) {
     console.error('Error checking follow:', e.message, e.response?.data);
     return false;
